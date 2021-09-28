@@ -10,7 +10,7 @@ The code has 6 files:
 
 main.py 
 
-This code imports the main files including the network architecture (the nodes, connections, link distance, etc.,), the demands (including the arrival times, the bandwidth request, etc.) and also is responsible for tracking the nodes and network resources throughout the network operation (which is implemented through iteration). In this file, another function, demand_updates.py takes care of the resource searches and the resource allocation for each demand
+This code imports the main files including the network architecture (the nodes, connections, link lengths, etc.,), the demands (including the arrival times, the bandwidth request, etc.) and also is responsible for tracking the nodes and network resources throughout the network operation (which is implemented through iteration). In this file, another function, demand_updates.py takes care of the resource searches and the resource allocation for each demand
 
 demand_update.py
 
