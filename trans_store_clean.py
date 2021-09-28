@@ -130,12 +130,12 @@ def ADR():
  
 
     P = file_reader("a-PATHS.dat","int")
-    Nodes=int(np.size(P,0))
-    Frame=int(np.size(P,1)/(Nodes*Nodes*(Nodes-1)))
-    PATHS=np.zeros((Nodes,Nodes,(Nodes*(Nodes-1)*Frame)))
-    for i in range(Nodes*(Nodes-1)*Frame):
-        PATHS[:,:,i]=P[:,i*Nodes:i*Nodes+Nodes]
-    PATHS=PATHS.astype(int)
+    Nodes = int(np.size(P, 0))
+    Frame = int(np.size(P, 1) / (Nodes * Nodes * (Nodes - 1)))
+    PATHS = np.zeros((Nodes, Nodes, (Nodes * (Nodes - 1) * Frame)))
+    for i in range(Nodes * (Nodes - 1) * Frame):
+        PATHS[:, :, i] = P[:, i * Nodes:i * Nodes + Nodes]
+    PATHS = PATHS.astype(int)
     
     
     INFO = file_reader("a-INFO.dat","float")
