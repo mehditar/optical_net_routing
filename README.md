@@ -37,6 +37,7 @@ Supplemental files:
 1.	a-PATHS.dat, a-INFO.dat, a-PathOrder.dat, a-LinkName.dat: these files contain the first 50 paths between each pair of source and destinations in the network. I used shortest path algorithm (SPA) on MATLAB  to obtain these files.
 3.	csvND.dat, csvNL.dat: these file contain the network architecture including the size of the network, the nodes and their connections and the length in kilometers of each link. The specific network, here is US backbone network with 28 nodes and 90 fiber links.  
 4.	QN.dat: this file contains all demands and their associated information including the arrival time of the demand, the size of the total data, source and destination nodes for the demand, and transfer completion due time.
+5.	Par.dat: contains the network configuration values
 
 
 
