@@ -1,4 +1,4 @@
-#from gurobipy import *
+from gurobipy import *
 import time as time
 import xlrd
 import numpy as np
@@ -11,9 +11,12 @@ def router_ILP(t_1andt_5, t_2, t_3, t_4, served, key_dic,
        NETWORKDIS, NETWORKLINK, PARAM, PATHS, INFO, PATHORDER, LINKNAME):
 
 
- 
+ # this function provides the routing, modulation level and spectrum search using interger linear
+ #programming.
 
- signl_s = set()
+ signl_s = set()# this part retrievs some information about the all signals that are already being
+ # transmitted in the network for other avtive demands. the pupose to put in a format that
+ #is more convininet while implementin the mathematicla equations.
  rev_active = set()
  demand = np.zeros((6, 1))
  demand[4] = src_node
@@ -52,8 +55,8 @@ def router_ILP(t_1andt_5, t_2, t_3, t_4, served, key_dic,
    
     m = Model("TS")
     
-    link_mtrx = NETWORKLINK
-    dist_mtrx = NETWORKDIS
+    link_mtrx = NETWORKLINK # the network characteristics are retrievd.
+    dist_mtrx = NETWORKDIS 
     n_of_nodes = len(NETWORKLINK)
     n_of_links = int(sum(sum(link_mtrx)) / 2)
     n_of_dests = (demand.shape[0]) - 5
@@ -65,13 +68,16 @@ def router_ILP(t_1andt_5, t_2, t_3, t_4, served, key_dic,
     B = -0.0967
     
     
-    
-    W = range(f_slice_cnt) 
-    M = [0, 1, 2, 3, 4]
-    D = range(n_of_dests)
-    link_range = range(int(2 * n_of_links))
-    MOD_REACH = [0, 625, 1250, 2500, 5000]
-    Data_Rate_PER_SLICE = [0, 50, 37, 25, 12]
+    # several sets are defined.
+    W = range(f_slice_cnt) # range of frequency slices
+    M = [0, 1, 2, 3, 4] # range of modulation formats codes
+    D = range(n_of_dests) # range of th number of destinations, in case there is a multicats connection
+    # in this experiment we assume only one destination per demand.
+    link_range = range(int(2 * n_of_links)) # a set describing different links in the network
+    MOD_REACH = [0, 625, 1250, 2500, 5000] # a set describing the maximum distance,or reach, a 
+    # modulation format can provide acceptable SNR
+    Data_Rate_PER_SLICE = [0, 50, 37, 25, 12] # set of data rate per frequency slice, for
+    # different modulation formats which include BPSK, QPSK, 8 QAM and 16 QAM.
     K = {0}
     Kdic = {}
     
@@ -83,7 +89,7 @@ def router_ILP(t_1andt_5, t_2, t_3, t_4, served, key_dic,
     paired_links = []
     for i in V:
         V_set.add(i)
-    for v in V:
+    for v in V: # the links that are going out of or into  each node are defined
         V_dict[v] = {}
         V_dict[v]["in_links"] = set()
         V_dict[v]["out_links"] = set()
@@ -97,14 +103,16 @@ def router_ILP(t_1andt_5, t_2, t_3, t_4, served, key_dic,
                     link_ind += 1
     for i in V:
         for j in V:
-            if NETWORKLINK[i][j] == 1:
+            if NETWORKLINK[i][j] == 1:# each two links in opposite direction that describe one fiber
+                # link are defined
                 paired_links.append([V_dict[i]["in_links"].
                                      intersection(V_dict[j]["out_links"]).pop(),
                                  V_dict[i]["out_links"].
                                      intersection(V_dict[j]["in_links"]).pop()])
     
     Zandset = np.zeros((n_of_demands, n_of_dests, 2)) 
-    for k in K:
+    for k in K: # this is usefull just in case we have more than one
+        #demand at a time and more than one destination per demand
         for d in D:
             Zandset[k][d][0] = demand[4][k]
             Zandset[k][d][1] = demand[5 + d][k]
@@ -115,7 +123,8 @@ def router_ILP(t_1andt_5, t_2, t_3, t_4, served, key_dic,
     
           
     
-
+    # these are the variables of the ILP. the detailed information of these fvariable are included in
+    # my open access paper at  https://ieeexplore.ieee.org/abstract/document/9006849/.  
    
     H = m.addVars(2 * n_of_links, n_of_demands, n_of_dests, lb = 0,
                 ub = 1, vtype = GRB.BINARY, name= "H" )
@@ -165,39 +174,42 @@ def router_ILP(t_1andt_5, t_2, t_3, t_4, served, key_dic,
     
 
 
-    #creating constrs 
+    # here the constrains are formed. I will label
+    #the constraints here with the corresponding equations in the mentioned paper.
+    
+    
     m.addConstrs(((quicksum(H[j, k, d] for j in V_dict[i]["in_links"]) - 1 <= 0)
-                  for i in V for k in K for d in D), "aa")
+                  for i in V for k in K for d in D), "aa") # eq3
     m.addConstrs(((quicksum(H[j, k, d] for j in V_dict[i]["out_links"]) - 1 <= 0)
-                  for i in V for k in K for d in D), "ab")
-    m.addConstrs(((quicksum(H[j, k, d] for j in V_dict[demand[5 + d][k]]["in_links"])
+                  for i in V for k in K for d in D), "ab") # eq4
+    m.addConstrs(((quicksum(H[j, k, d] for j in V_dict[demand[5 + d][k]]["in_links"]) 
                    - quicksum(H[j, k, d] for j in V_dict[demand[5 + d][k]]["out_links"]) == 1)
-                  for k in K for d in D), "ac")
+                  for k in K for d in D), "ac")# eq5
    
     m.addConstrs(((quicksum(H[j, k, d] for j in V_dict[demand[4][k]]["out_links"])
                    - quicksum(H[j, k, d] for j in V_dict[demand[4][k]]["in_links"]) == 1)
-                  for k in K for d in D), "acc")
+                  for k in K for d in D), "acc") # eq5
     m.addConstrs(((quicksum(H[j, k, d]for j in V_dict[i]["in_links"])
                    - quicksum(H[j, k, d]for j in V_dict[i]["out_links"]) == 0)
                   for k in K for d in D for i in 
-                  (V_set - set(demand[[4], [k]]) - set(demand[[5 + d], [k]]))), "ae")
+                  (V_set - set(demand[[4], [k]]) - set(demand[[5 + d], [k]]))), "ae") # eq5
     m.addConstrs((quicksum(Z[j, k, d, w]for w in W) - H[j, k, d] * 400 <= 0
-                  for j in link_range for k in K for d in D), "ah")
+                  for j in link_range for k in K for d in D), "ah") # eq6
     
     m.addConstrs((Reg[ia, k, da] + Reg[ib, k, db] + Sub[k, da, db] -2 <= 0 
                   for ia in V_set for ib in V_set if ia != ib 
-                  for k in K for da in D for db in D), "ap")
+                  for k in K for da in D for db in D), "ap")# eq 8
     m.addConstrs((quicksum(Reg[i, k, d]for i in V_set) == 0 
                   for k in K for d in D), "aq")
 
     m.addConstrs((R[j, k, d] - H[j, k, d] <= 0 for j in link_range 
-                  for k in K for d in D), "az")
+                  for k in K for d in D), "az") # eq 11
     m.addConstrs((quicksum(R[j, k, d]for j in V_dict[demand[5 + d][k]]["in_links"])
                   - quicksum(Reg[i, k, d]for i in V_set) == 0 
                   for k in K for d in D), "ba")
     m.addConstrs((quicksum(R[j, k, d]for j in V_dict[i]["out_links"])
                   - quicksum(R[j, k, d]for j in V_dict[i]["in_links"]) - Reg[i,k,d] == 0 
-                  for k in K for d in D for i in (V_set - set(demand[[4, 5 + d], [k, k]]))), "bb")
+                  for k in K for d in D for i in (V_set - set(demand[[4, 5 + d], [k, k]]))), "bb") # eq 10
   
     
    
@@ -208,65 +220,65 @@ def router_ILP(t_1andt_5, t_2, t_3, t_4, served, key_dic,
     m.addConstrs((Mod[k, d, m]
                   * MAXDIST + quicksum((link_lngth.get(j) * (H[j, k, d] - R[j, k, d])for j in link_range)) -
                   (MOD_REACH[m] * (A + B * quicksum(Sub[k, d, db] - cr[k, d, db]for db in D if db != d)))
-                  - (1 / 2) <= MAXDIST for k in K for d in D for m in M), "bh")
+                  - (1 / 2) <= MAXDIST for k in K for d in D for m in M), "bh") # eq 13
     m.addConstrs((Modr[k, d, m]
                   * MAXDIST + quicksum((link_lngth.get(j) * (R[j, k, d])for j in link_range)) -
                   (MOD_REACH[m] * (A + B * quicksum(Subr[k, d, db]for db in D if db != d)))
-                  - (1 / 2) <= MAXDIST for k in K for d in D for m in M), "bh2")
+                  - (1 / 2) <= MAXDIST for k in K for d in D for m in M), "bh2") # eq 14
 
   
     m.addConstrs((Mod[k, da, m] - Mod[k, db, m] - Sub[k, da, db] + 1 >= 0
-                  for k in K for da in D for db in D for m in M), "plg")
+                  for k in K for da in D for db in D for m in M), "plg") # eq 15
     m.addConstrs((Modr[k, da, m] - Modr[k, db, m] - Subr[k, da, db] + 1 >= 0
-                  for k in K for da in D for db in D for m in M), "plg2")
+                  for k in K for da in D for db in D for m in M), "plg2") # eq 16
    
-    m.addConstr(quicksum(Mod[0, 0, m] for m in M) == 1, "bk")
+    m.addConstr(quicksum(Mod[0, 0, m] for m in M) == 1, "bk") # eq 17
     
     m.addConstrs(ft[k, d] == quicksum
                  (quicksum(Z[j, k, d, w]for w in W)
-                  for j in V_dict[demand[4][k]]["out_links"])for d in D for k in K)
+                  for j in V_dict[demand[4][k]]["out_links"])for d in D for k in K) # eq 18
     
     m.addConstrs(fr[k,d]==quicksum
                  (quicksum(Z[j, k, d, w]for w in W)
-                  for j in V_dict[demand[5 + d][k]]["in_links"])for d in D for k in K)
+                  for j in V_dict[demand[5 + d][k]]["in_links"])for d in D for k in K) # eq 19
     
     m.addConstrs((2 * Zand[b, k, d, w] - quicksum(Z[j, k, d, w]for 
                                            j in V_dict[Zandset[k][d][b]]["in_links"] | V_dict[Zandset[k][d][b]]["out_links"] )
                   - ( -1 * quicksum(Z[j, k, d, w - 1]for j in V_dict[Zandset[k][d][b]]["in_links"]
                                 | V_dict[Zandset[k][d][b]]["out_links"]) + 1) <= 0 
                   for d in D for k in K for b in range(2) 
-                  for w in W if w != 0), "kjhd")
+                  for w in W if w != 0), "kjhd") # eq 20
     
     m.addConstrs((2 * Zand[b, k, d, w] - quicksum(Z[j, k, d, w]for
                                            j in V_dict[Zandset[k][d][b]]["in_links"]
                                                   |V_dict[Zandset[k][d][b]]["out_links"] )
                   - ( -1 * quicksum(Z[j, k, d, w - 1]for j in V_dict[Zandset[k][d][b]]["in_links"]
                                 | V_dict[Zandset[k][d][b]]["out_links"]) + 1) >= (-3 / 2) 
-                  for d in D for k in K for b in range(2) for w in W if w != 0), "kjfd2")
+                  for d in D for k in K for b in range(2) for w in W if w != 0), "kjfd2") # eq 21
     
 
     
     m.addConstrs((Zand[b, k, d, 0] == quicksum
                   (Z[j, k, d, 0]for j in V_dict[Zandset[k][d][b]]["in_links"]
                    | V_dict[Zandset[k][d][b]]["out_links"]) for d in D 
-                  for k in K for b in range(2)), "kjhd_prim")
+                  for k in K for b in range(2)), "kjhd_prim") # eq 22
   
     m.addConstrs((quicksum(Zand[b, k, d, w]for w in W)
-                  <= 1 for k in K for d in D for b in range(2)), "haha")
+                  <= 1 for k in K for d in D for b in range(2)), "haha") # eq 23
    
     m.addConstrs((quicksum(Z[j, k, d, w]for j in V_dict[i]["out_links"])
                   - quicksum(Z[j, k, d, w]for j in V_dict[i]["in_links"]) + Reg[i, k, d] >= 0
                   for w in W for k in K for d in D for i in
-                  (V_set - set(demand[[4], [k]]) - set(demand[[5 + d], [k]]))), "bm")
+                  (V_set - set(demand[[4], [k]]) - set(demand[[5 + d], [k]]))), "bm") # eq 24
     
     m.addConstrs((quicksum(Z[j, k, d, w]for j in V_dict[i]["out_links"])
                   - quicksum(Z[j, k, d, w]for j in V_dict[i]["in_links"]) - Reg[i, k, d] <= 0
                   for w in W for k in K for d in D for i in
-                  (V_set - set(demand[[4, 5 + d], [k, k]]))), "bm2")
+                  (V_set - set(demand[[4, 5 + d], [k, k]]))), "bm2") # eq 25
   
     m.addConstrs((quicksum(w * (Zand[0, k, da, w] - Zand[0, k, db, w])
                            for w in W) - f_slice_cnt * (1 - Sub[k, da, db]) <= 0 
-                  for k in K for da in D for db in D),"juih")
+                  for k in K for da in D for db in D),"juih") # eq 26
     
     m.addConstrs((quicksum(w * (Zand[1, k, da, w] - Zand[1, k, db, w])
                            for w in W) - f_slice_cnt * (2 - Subr[k, da, db] - Com[k, da, db]) <= 0 
@@ -274,35 +286,35 @@ def router_ILP(t_1andt_5, t_2, t_3, t_4, served, key_dic,
   
     m.addConstrs((Z[j, k, da, w] + Z[j, k, db, w] - Sub[k, da, db] <= 1 
                   for w in W for k in K for da in D for db in D
-                  for j in link_range), "ttf")
+                  for j in link_range), "ttf") # 27
     
     m.addConstrs((Subr[k, da, db] - Sub[k, da, db] <= 0 
-                  for k in K for da in D for db in D), "uvh")
+                  for k in K for da in D for db in D), "uvh")# eq 27
     
     m.addConstrs((Com[k, da, db] - Sub[k, da, db] >= 0 
-                  for k in K for da in D for db in D), "uvh2")
+                  for k in K for da in D for db in D), "uvh2") # 27
 
     m.addConstrs((R[j, k, da] + R[j, k, db] <= (2 + Com[k, da, db] - Subr[k, da, db])
-                  for j in link_range for k in K for da in D for db in D), "azpl")
+                  for j in link_range for k in K for da in D for db in D), "azpl") # 27
     
     m.addConstrs((f_slice_cnt * Alpha[k, da, db] -
                   quicksum(w * (Zand[1, k, da, w] - Zand[1, k, db, w])for w in W)
-                  - (1 / 2) >= 0 for k in K for da in D for db in D), "cop1")
+                  - (1 / 2) >= 0 for k in K for da in D for db in D), "cop1") # 28
     
     m.addConstrs((f_slice_cnt * Alpha[k, da, db] -
                   quicksum(w * (Zand[1, k, da, w] - Zand[1, k, db, w])for w in W)
-                  - (1 / 2) <= f_slice_cnt for k in K for da in D for db in D), "cop2")
+                  - (1 / 2) <= f_slice_cnt for k in K for da in D for db in D), "cop2") # 29
 
     m.addConstrs((quicksum(w * (Zand[1, k, da, w] - Zand[1, k, db, w])for w in W)
                   + f_slice_cnt * 2 * (Alpha[k, db, da] - 1) +
                   fr[k, da] - f_slice_cnt * 2 * (1 + Subr[k, da, db] - Com[k, da, db]) <= 0 
-                  for k in K for da in D for db in D),"akh")
+                  for k in K for da in D for db in D),"akh") # eq29
     
     m.addConstrs((Sub[k, da, db] - Sub[k, db, da] == 0 
-                  for k in K for da in D for db in D), "ghn")
+                  for k in K for da in D for db in D), "ghn") # eq 30
     
     m.addConstrs((Subr[k, da, db] - Subr[k, db, da] == 0 
-                  for k in K for da in D for db in D), "ghn2")
+                  for k in K for da in D for db in D), "ghn2") #  Eq 30
     
     m.addConstrs((Sub[k, da, db] == 1 for k in K for da in D
                   for db in D), "khn")
@@ -373,7 +385,7 @@ def router_ILP(t_1andt_5, t_2, t_3, t_4, served, key_dic,
     m.addConstr(datarate_goal >= state[4] + 12)
     
   
-    m.setPARAM('TimeLimit', n_of_demands * 130)
+    m.setPARAM('TimeLimit', n_of_demands * 130) # this puts a limitation on the execution time
     m.setPARAM('OutputFlag', False)
   
     m.optimize()
@@ -403,7 +415,8 @@ def router_ILP(t_1andt_5, t_2, t_3, t_4, served, key_dic,
  bitrate_tot = 0
  reduction = 0
  success = False
- 
+ # here the search is over, and if a path is found along with its 
+ #modulationlevelm and spectrum are stored here.
  if m.status == 2:
         success = True
         new_goal = datarate_goal.x
@@ -413,13 +426,14 @@ def router_ILP(t_1andt_5, t_2, t_3, t_4, served, key_dic,
                 b = 0
                 b = (Z[j, 0, 0, w].x)
                 if b > .5:
-                    link_s.add(j)
-                    frqncy_s.add(w) 
+                    link_s.add(j)# the links in the selected path are saved
+                    frqncy_s.add(w) # the spectrum of the suggested lighpath is defined
         links_in_path = len(link_s)
         for i in range(light_cnt):
             if Lights[i].x <= 0.5:
                 reduction = 1
-                to_relsc_set.add(t_4[0, i])
+                to_relsc_set.add(t_4[0, i]) # other signals link-spectrum that is in conflict with
+                # this lighpath are searched
   
                 
         for m in M:
@@ -428,7 +442,8 @@ def router_ILP(t_1andt_5, t_2, t_3, t_4, served, key_dic,
         modulation = min(valid_modulations)
         Rid = state[3] + 1
         bitrate = sum([Mod[0, 0, m].x * Data_Rate_PER_SLICE[m] for m in M])
-        bitrate_tot = bitrate * (len(frqncy_s) - 1)
+        bitrate_tot = bitrate * (len(frqncy_s) - 1)# total bitrate the the candidate lightpath can
+        # support is calculated
         
         while len(frqncy_s) != 0:
             a = min(frqncy_s)
@@ -436,7 +451,7 @@ def router_ILP(t_1andt_5, t_2, t_3, t_4, served, key_dic,
             dem_id_dict[Rid] = {}
             dem_id_dict[Rid][1] = [len(link_s), Drateperslice, min(valid_modulations), a]
             dem_id_dict[Rid][2] = link_s
-            to_add_set.add(Rid)
+            to_add_set.add(Rid) # the link_spectrums of the candidate path are stores.
             if len(frqncy_s) != 0:
                 Rid += 1
         
