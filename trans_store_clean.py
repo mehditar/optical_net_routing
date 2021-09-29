@@ -1,7 +1,9 @@
+import copy
 import numpy as np
 import csv
 import random
-def USA(served, active, state, id, output):
+def USA(served, active, state, id, output): # this function adds the information
+    #about a newlightpaths of a demand to served,and active
     Iid = served[3][id][4] + 1
     served[3][id][1] = served[3][id][1] + 1
     served[3][id][2].add(Iid)
@@ -19,7 +21,8 @@ def USA(served, active, state, id, output):
     return [served, active]
 #
 
-def USC(served, id, output):
+def USC(served, id, output): # this function adds the information about the first lightpath
+    # of a demand to served 
     served[1] = served[1] + 1
     served[2].add(id)
     served[3][id] = {}
@@ -36,7 +39,8 @@ def USC(served, id, output):
 #
 
 
-def USAR(served,key_dict,active,state,output):
+def USAR(served,key_dict,active,state,output): # this function removes the spectrum and links from
+    # lightpaths that have conflict with a newly selected lighpaht.
     reduced_already = set()
     for S in output[8]:
          guard = 0
@@ -68,7 +72,9 @@ def USAR(served,key_dict,active,state,output):
 #
 
 
-def TP(served, key_dict, active, state, PARAM, dem_id_dict):
+def TP(served, key_dict, active, state, PARAM, dem_id_dict): # this function simply
+    # retrives the information about lighpaths and the active demands and put them in the
+    # table form to be used by other routing functions
    
     a_size = state[6]
     t_1 = np.zeros((a_size, 6))
@@ -119,7 +125,8 @@ def TP(served, key_dict, active, state, PARAM, dem_id_dict):
 #
 
 
-def ADR():
+def ADR(): # this function reads the files about the shortests paths between each pair of the nodes 
+    # in the network which where already calculated using MATLAB
     
     def file_reader(file_name,data_type):
         reader = csv.reader(open(file_name, "r"), delimiter=",")
@@ -184,7 +191,7 @@ def NDF(active, state, q_next, no_new_demand):
     return [state, b]
 #
 
-def Finder3(Array, Size, Id):
+def Finder3(Array, Size, Id): # this function removes one element in the passive list
     if Size == 1:
         Array[Id, 1:] = Array[Id, 1:] * 0
         return Array
@@ -204,7 +211,7 @@ def Finder3(Array, Size, Id):
                 
 #
 
-def Finder2(Array, Size, info_array):
+def Finder2(Array, Size, info_array): # this function adds one element to the active list
     if Size >= 1:
         if info_array[1] >= Array[0, 2]:
             Array[1: Size + 1, 1:] = Array[0:Size, 1:]
@@ -222,7 +229,8 @@ def Finder2(Array, Size, info_array):
     return Array
 #
 
-def Finder(Array, Dimention, Dvalue, Value):
+def Finder(Array, Dimention, Dvalue, Value): # this function finds the id of
+    # an entry according to a value mach in a particular dimention.
     if Dimention == 0:
         for ind in range(len(Array[:, Dvalue])):
             if Array[ind, Dvalue] == Value:
@@ -234,7 +242,9 @@ def Finder(Array, Dimention, Dvalue, Value):
 #
 
 
-def DBR(active,passive,state,last_time,mxws):
+def DBR(active,passive,state,last_time,mxws):#this function updates the 
+    #minimum bitrate requirements of each active and passive demand according to the data volume that is left 
+    # and the due time of the transfer.
     a = last_time
     b = state[0]
     if a == b:  
@@ -265,7 +275,7 @@ def DBR(active,passive,state,last_time,mxws):
              passive[i, 7] = passive[i, 6] / (passive[i, 5] - b)
     return [active, passive]
 #
-def greater_membrs(my_set,value):
+def greater_membrs(my_set,value): 
     out=set()
     for i in my_set:
         if i>value:
@@ -274,7 +284,7 @@ def greater_membrs(my_set,value):
 #
 
 
-def Finder2_2(arr, size, info_arr):
+def Finder2_2(arr, size, info_arr):# equivalent of Finer2
     if size >= 1:
         efficiency = 1
         raandom = 0
