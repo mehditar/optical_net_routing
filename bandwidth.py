@@ -5,32 +5,48 @@ def max_band_selec(newNet, newmyNet, _relsc_cap, new_my_relsc_cap,
         Zeta, trx_mx, f_slice_cnt, active_cnt, is_active, 
         non_redctn, ith_path, ttx_remnng):
     
-    
+    # this function receives two matrices. for each of these three dinemtional matrices
+    # the first two demntions represents the links between nodes and the third dimentions
+    # the the frequency slices for link. for each the zero means there is no link and
+    # in the third dimention any other number represents the existenxe of the link and rate of 
+    # data transfer if that link-frequency slice is already in use, or if it is selected in this
+    # round. it should be noted that this rate is subject to change as it depends on the distance
+    # between the source and destination not the lenght of the link.
+    # to find the best spectrum (or frquency slice range) in this particular situation,
+    # we can apply brute force method which will create three nested for loops and,
+    # given the high number of the nodes and frequency slice, ithe algorithm looses its agility.
+    # here we use an iterative rolling strategy combind with getting maximum to find the best spectrum.
 
     
     #min_bit_-start
     delta = 10000000
     temp = _relsc_cap.reshape(active_cnt, 1)
     _relsc_cap = np.tile(temp, (1, f_slice_cnt))
-    min_bit_bef = np.zeros((active_cnt, f_slice_cnt))
+    min_bit_bef = np.zeros((active_cnt, f_slice_cnt))# this matrix is just to make sure that whatever 
+    # spectrum comes out metts the minimum bitrate qualification needed for the demand.
     min_bit_aft = np.zeros((active_cnt, f_slice_cnt))
     #--min_bit_-end
     #---
     #---
     
     #midf-start
-    path = path[:, :, np.newaxis]
-    ints = newNet * np.tile(path, (1, 1, f_slice_cnt))
+    path = path[:, :, np.newaxis]# the path is replicated into a three dimentional
+    # matrix.
+    ints = newNet * np.tile(path, (1, 1, f_slice_cnt))# here the signals that are in 
+    # use with for other demand and have spectrum conflit with the current path are determined
     signal = np.unique(ints)
     signal = signal[1:]
+    
     #--
     #-condition:NoSIGNAL
     if len(signal) == 0:
+        # if there is no signal in the network them the bandwith is euivalent to the minimum of all
+        # frequency slice and the number of allowed transceivers
         thickness = min([trx_mx+1, f_slice_cnt])
         objective = (thickness - 1) * path_rate * (1 + 10 * Zeta * path_worth)
         ind = 0
         if (thickness - 1) * path_rate < - new_my_relsc_cap:
-          return [-1, ind,thickness]  
+            return [-1, ind,thickness]  
             
         return [objective, ind, thickness]
     #---
@@ -45,6 +61,9 @@ def max_band_selec(newNet, newmyNet, _relsc_cap, new_my_relsc_cap,
         sheet_bit[j, :] = sheet[j, :] * t_3[signal[j] - 1][2] * (
             1 + 10 * Zeta * t_3[signal[j] - 1][3])
     mid = sheet.copy()
+    # another limitation on the spectrum is that it cannot be the middle spectrum of another signal
+    # because this causes the guardband issue. the purpose of the mid, mid_bef, and mid_after
+    # matices is to filter out the choices that dont meet this condition
     temp_1 = mid.copy()
     temp_1[:, 0:-1] = mid[:, 1:]
     temp_1[:, -1] = np.zeros((signals))
@@ -69,7 +88,7 @@ def max_band_selec(newNet, newmyNet, _relsc_cap, new_my_relsc_cap,
     benefit = np.ones((1, f_slice_cnt)) * path_rate * (
         1 + 10 * Zeta * path_worth)
     mx = np.zeros((f_slice_cnt, 2))
-    #general
+    #general. this defines the total spectrum use increment that will be resulted
     
     #mybit-start
     my_bit = newmyNet.copy()
@@ -108,6 +127,8 @@ def max_band_selec(newNet, newmyNet, _relsc_cap, new_my_relsc_cap,
     #---
     #---
     for i in range(min([trx_mx + 1, f_slice_cnt, int(ttx_remnng + 1)])):
+        # this is wherre the rolling is perfomed . for each roll, all the matrices are rolled once
+        # and only the valid results are returned. 
         
         #--min_bit_-start
         min_bit_aft[:, i:] = min_bit_aft[:, i:] + min_bit_bef[
@@ -156,14 +177,19 @@ def max_band_selec(newNet, newmyNet, _relsc_cap, new_my_relsc_cap,
         aa = aa.reshape(1, f_slice_cnt)
         bb = bb.reshape(1, f_slice_cnt)
         dd = dd.reshape(1, f_slice_cnt)
-        mm = aft - aa - bb - dd
-        mx[i, 0] = np.amax(mm[0, i:])
-        mx[i, 1] = np.argmax(mm[0, i:])
+        temp = aft - aa - bb - dd # here only the valid results will have positiv results.
+        # and the one with the maximum value is stored as the maximum gain that we can get for this 
+        # particular spectrum range
+        mx[i, 0] = np.amax(temp[0, i:])
+        mx[i, 1] = np.argmax(temp[0, i:])
         mx[i, 1] = mx[i, 1] + i
     #--
     #---
     
-    objective = np.amax(mx[:, 0], axis = 0)
+    objective = np.amax(mx[:, 0], axis = 0) # here the range the provides the maximum gain among all 
+    # other spectrum is selected. Please note that a bigger spectrum may not necessirirly result in 
+    # a bigger gain as use of it may require emiminating some spectrum of other  
+    #signal that are in use to avoid spectrum conflict.
     thickness = np.argmax(mx[:, 0], axis = 0)
     thickness = int(thickness + 1)
     objective = objective - path_rate * (1 + 10 * Zeta * path_worth)
