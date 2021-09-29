@@ -161,7 +161,7 @@ while (state[6] + flag_1 + flag_2) != 0:# this is the beggining of the interatin
         
         
         if q_size == state[7]: # if all the demand are given at least one route 
-            # and passive list become empty.
+             # and passive list become empty.
              flag_2 = 0
         
     last_time = state[0]          
