@@ -31,7 +31,7 @@ def one_demand_update(active, passive, demand, state, served, key_dict,
             state[4] = input_table[5]
             
             if PARAM[9] == 1: # based on the user preference the search is conducted by either
-                # heuristic algorithm or interger linear programming
+               # heuristic algorithm or interger linear programming
                 
                search_res = router_ILP([input_table[0], input_table[4]], input_table[1],
                          input_table[2], input_table[3], served, key_dict,
@@ -57,7 +57,7 @@ def one_demand_update(active, passive, demand, state, served, key_dict,
                
             
                if resrclss_dem == 1: # nased on the type of demand, active or not, the infomation 
-                    # about the found path are stored in the associated place
+                   # about the found path are stored in the associated place
                    served = USC(served, Id, search_res)
                    for S in search_res[2]:
                        key_dict[S] = [Id, 0]
@@ -70,13 +70,13 @@ def one_demand_update(active, passive, demand, state, served, key_dict,
         
         
                if search_res[7] == 1:# if any release of resources that are being used by other
-                # demands is needed to be able to allocate stablish the new found search, this function
-                # removes (or releases) the resources.
+                  # demands is needed to be able to allocate stablish the new found search, this function
+                  # removes (or releases) the resources.
                   [served, active] = USAR(served, key_dict, active, state, search_res)
                   reduction = 1
 
                if resrclss_dem == 1: # if the demand was not an active demand
-                # this funciton adds the demand to active demands
+                   # this funciton adds the demand to active demands
                 
                    Info = [Id, demand[8], change, demand[1], demand[2], demand[3],
                          search_res[6], demand[3] / search_res[6] + state[0], len(search_res[2]),
@@ -86,7 +86,7 @@ def one_demand_update(active, passive, demand, state, served, key_dict,
                    Sid = Finder(active[0: state[6], 0: 2], 0, 1, Id)
                    resrclss_dem = 0
                    if is_arrvd==0: # if the demand was among the in line demand not a newly arrived demand 
-                    # it has to be removed from the passive list
+                      # it has to be removed from the passive list
                       Sid_ash = Finder(passive[0: state[7], 0: 2], 0, 1, Id)
                       passive = Finder3(passive, state[7], Sid_ash)
                       state[7] -= 1
